@@ -3,10 +3,10 @@
 #-------------------------------------------------------------
 import os
 import sys
-import re
 import cProfile
 
 from ast import *
+from improve_ast import improve_ast
 from parameters import *
 
 
@@ -14,10 +14,9 @@ from parameters import *
 def node_fields(node):
     ret = []
     for field in node._fields:
-        if field <> 'ctx' and hasattr(node, field):
+        if field != 'ctx' and hasattr(node, field):
             ret.append(getattr(node, field))
     return ret
-
 
 
 # get full source text where the node is from
@@ -28,41 +27,34 @@ def node_source(node):
         return None
 
 
-
 # utility for getting exact source code part of the node
 def src(node):
-    return node.node_source[node.node_start : node.node_end]
-
+    return node.node_source[node.node_start: node.node_end]
 
 
 def node_start(node):
-    if (hasattr(node, 'node_start')):
+    if hasattr(node, 'node_start'):
         return node.node_start
     else:
         return 0
-
 
 
 def node_end(node):
     return node.node_end
 
 
-
 def is_atom(x):
     return type(x) in [int, str, bool, float]
-
 
 
 def is_def(node):
     return isinstance(node, FunctionDef) or isinstance(node, ClassDef)
 
 
-
 # whether a node is a "frame" which can contain others and be
 # labeled
 def is_frame(node):
     return type(node) in [ClassDef, FunctionDef, Import, ImportFrom]
-
 
 
 def is_empty_container(node):
@@ -102,10 +94,9 @@ def can_move(node1, node2, cost):
 # the other party matches a substructure of it.
 def node_framed(node, changes):
     for c in changes:
-        if (c.is_frame and (node == c.orig or node == c.cur)):
+        if c.is_frame and (node == c.orig or node == c.cur):
             return True
     return False
-
 
 
 # helper for turning nested if statements into sequences,
@@ -157,7 +148,6 @@ def attr_to_str(node):
 
 ### utility for counting size of terms
 def node_size(node, test=False):
-
     if not test and hasattr(node, 'node_size'):
         ret = node.node_size
 
@@ -194,7 +184,6 @@ def node_size(node, test=False):
     return ret
 
 
-
 #-------------------------------------------------------------
 # utilities
 #-------------------------------------------------------------
@@ -219,7 +208,7 @@ def div(m, n):
     if n == 0:
         return m
     else:
-        return m/float(n)
+        return m / float(n)
 
 
 # for debugging
@@ -264,8 +253,6 @@ def pf():
     cProfile.run("run('heavy')", sort="cumulative")
 
 
-
-
 #------------------------ file system support -----------------------
 
 def base_name(filename):
@@ -283,7 +270,7 @@ def base_name(filename):
 
 ## file system support
 def parse_file(filename):
-    f = open(filename, 'r');
+    f = open(filename, 'r')
     lines = f.read()
     ast = parse(lines)
     improve_ast(ast, lines, filename, 'left')
