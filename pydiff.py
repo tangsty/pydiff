@@ -12,10 +12,10 @@ from htmlize import *
 from utils import *
 
 
-
 #------------------------------- types ------------------------------
 class Stat:
     "storage for stat counters"
+
     def __init__(self):
         self.reset()
 
@@ -26,16 +26,17 @@ class Stat:
 
     def add_moves(self, nterms):
         self.move_savings += nterms
-        self.move_count +=1
+        self.move_count += 1
         if self.move_count % 1000 == 0:
             dot()
+
     def add_diff(self):
         self.diff_count += 1
         if stat.diff_count % 1000 == 0:
             dot()
 
-stat = Stat()
 
+stat = Stat()
 
 
 # The difference between nodes are stored as a Change structure.
@@ -52,17 +53,20 @@ class Change:
         else:
             self.cost = cost
         self.is_frame = is_frame
+
     def __repr__(self):
         fr = "F" if self.is_frame else "-"
+
         def hole(x):
-            return [] if x==None else x
+            return [] if x == None else x
+
         return ("(C:" + str(hole(self.orig)) + ":" + str(hole(self.cur))
                 + ":" + str(self.cost) + ":" + str(self.similarity())
                 + ":" + fr + ")")
+
     def similarity(self):
         total = node_size(self.orig) + node_size(self.cur)
         return 1 - div(self.cost, total)
-
 
 
 # Three major kinds of changes:
@@ -72,28 +76,29 @@ class Change:
 def mod_node(node1, node2, cost):
     return Change(node1, node2, cost)
 
+
 def del_node(node):
     return Change(node, None, node_size(node))
+
 
 def ins_node(node):
     return Change(None, node, node_size(node))
 
 
-# 2-D array table for memoization of dynamic programming
+# 2-D array table for memorization of dynamic programming
 def create_table(x, y):
     table = []
-    for i in xrange(x+1):
-        table.append([None] * (y+1))
+    for i in xrange(x + 1):
+        table.append([None] * (y + 1))
     return table
+
 
 def table_lookup(t, x, y):
     return t[x][y]
 
+
 def table_put(t, x, y, v):
     t[x][y] = v
-
-
-
 
 
 #-------------------------------------------------------------
@@ -118,9 +123,9 @@ def str_dist(s1, s2):
 
     table = create_table(len(s1), len(s2))
     d = dist1(table, s1, s2)
-    ret = div(2*d, len(s1) + len(s2))
+    ret = div(2 * d, len(s1) + len(s2))
 
-    str_dist_cache[(s1, s2)]=ret
+    str_dist_cache[(s1, s2)] = ret
     return ret
 
 
@@ -153,26 +158,23 @@ def dist1(table, s1, s2):
         return memo(min(d0, d1, d2))
 
 
-
-
 #-------------------------------------------------------------
 #                        diff of nodes
 #-------------------------------------------------------------
 
 def diff_node(node1, node2, depth, move):
-
-    # try substructural diff
+    # try substructure's diff
     def trysub((changes, cost)):
         if not move:
-            return (changes, cost)
+            return changes, cost
         elif can_move(node1, node2, cost):
-            return (changes, cost)
+            return changes, cost
         else:
             mc1 = diff_subnode(node1, node2, depth, move)
             if mc1 is not None:
                 return mc1
             else:
-                return (changes, cost)
+                return changes, cost
 
     if isinstance(node1, list) and not isinstance(node2, list):
         node2 = [node2]
@@ -190,38 +192,38 @@ def diff_node(node1, node2, depth, move):
     stat.add_diff()
 
     if node1 == node2:
-        return ([mod_node(node1, node2, 0)], 0)
+        return [mod_node(node1, node2, 0)], 0
 
     if isinstance(node1, Num) and isinstance(node2, Num):
         if node1.n == node2.n:
-            return ([mod_node(node1, node2, 0)], 0)
+            return [mod_node(node1, node2, 0)], 0
         else:
-            return ([mod_node(node1, node2, 1)], 1)
+            return [mod_node(node1, node2, 1)], 1
 
     if isinstance(node1, Str) and isinstance(node2, Str):
         cost = str_dist(node1.s, node2.s)
-        return ([mod_node(node1, node2, cost)], cost)
+        return [mod_node(node1, node2, cost)], cost
 
     if (isinstance(node1, Name) and isinstance(node2, Name)):
         cost = str_dist(node1.id, node2.id)
         return ([mod_node(node1, node2, cost)], cost)
 
     if (isinstance(node1, Attribute) and isinstance(node2, Name) or
-        isinstance(node1, Name) and isinstance(node2, Attribute) or
-        isinstance(node1, Attribute) and isinstance(node2, Attribute)):
+                isinstance(node1, Name) and isinstance(node2, Attribute) or
+                isinstance(node1, Attribute) and isinstance(node2, Attribute)):
         s1 = attr_to_str(node1)
         s2 = attr_to_str(node2)
         if s1 is not None and s2 is not None:
             cost = str_dist(s1, s2)
             return ([mod_node(node1, node2, cost)], cost)
-        # else fall through for things like f(x).y vs x.y
+            # else fall through for things like f(x).y vs x.y
 
     if isinstance(node1, Module) and isinstance(node2, Module):
         return diff_node(node1.body, node2.body, depth, move)
 
     # same type of other AST nodes
     if (isinstance(node1, AST) and isinstance(node2, AST) and
-        type(node1) == type(node2)):
+                type(node1) == type(node2)):
 
         fs1 = node_fields(node1)
         fs2 = node_fields(node2)
@@ -236,7 +238,7 @@ def diff_node(node1, node2, depth, move):
         return find_moves((changes, cost))
 
     if (type(node1) == type(node2) and
-             is_empty_container(node1) and is_empty_container(node2)):
+            is_empty_container(node1) and is_empty_container(node2)):
         return ([mod_node(node1, node2, 0)], 0)
 
     # all unmatched types and unequal values
@@ -244,13 +246,11 @@ def diff_node(node1, node2, depth, move):
                    node_size(node1) + node_size(node2)))
 
 
-
 ########################## diff of a list ##########################
 
 # diff_list is the main part of dynamic programming
 
 def diff_list(table, ls1, ls2, depth, move):
-
     def memo(v):
         table_put(table, len(ls1), len(ls2), v)
         return v
@@ -261,9 +261,9 @@ def diff_list(table, ls1, ls2, depth, move):
         cost1 = c1 + c0
 
         if ((is_frame(ls1[0]) and
-             is_frame(ls2[0]) and
-             not node_framed(ls1[0], m0) and
-             not node_framed(ls2[0], m0))):
+                 is_frame(ls2[0]) and
+                 not node_framed(ls1[0], m0) and
+                 not node_framed(ls2[0], m0))):
             frame_change = [mod_node(ls1[0], ls2[0], c0)]
         else:
             frame_change = []
@@ -279,7 +279,7 @@ def diff_list(table, ls1, ls2, depth, move):
             cost3 = c3 + node_size(ls2[0])
 
             if (not different_def(ls1[0], ls2[0]) and
-                cost1 <= cost2 and cost1 <= cost3):
+                        cost1 <= cost2 and cost1 <= cost3):
                 return (frame_change + m0 + m1, cost1)
             elif (cost2 <= cost3):
                 return ([del_node(ls1[0])] + m2, cost2)
@@ -310,8 +310,6 @@ def diff_list(table, ls1, ls2, depth, move):
         return memo((d, node_size(ls1)))
 
 
-
-
 ###################### diff into a subnode #######################
 
 # Subnode diff is only used in the moving phase. There is no
@@ -320,10 +318,9 @@ def diff_list(table, ls1, ls2, depth, move):
 # them to be complete deletion and insertions.
 
 def diff_subnode(node1, node2, depth, move):
-
     if (depth >= FRAME_DEPTH or
-        node_size(node1) < FRAME_SIZE or
-        node_size(node2) < FRAME_SIZE):
+                node_size(node1) < FRAME_SIZE or
+                node_size(node2) < FRAME_SIZE):
         return None
 
     if isinstance(node1, AST) and isinstance(node2, AST):
@@ -339,7 +336,7 @@ def diff_subnode(node1, node2, depth, move):
 
         if (node_size(node1) < node_size(node2)):
             for f in node_fields(node2):
-                (m0, c0) = diff_node(node1, f, depth+1, move)
+                (m0, c0) = diff_node(node1, f, depth + 1, move)
                 if can_move(node1, f, c0):
                     if not isinstance(f, list):
                         m1 = [mod_node(node1, f, c0)]
@@ -351,7 +348,7 @@ def diff_subnode(node1, node2, depth, move):
 
         if (node_size(node1) > node_size(node2)):
             for f in node_fields(node1):
-                (m0, c0) = diff_node(f, node2, depth+1, move)
+                (m0, c0) = diff_node(f, node2, depth + 1, move)
                 if can_move(f, node2, c0):
                     framecost = node_size(node1) - node_size(node2)
                     if not isinstance(f, list):
@@ -364,8 +361,6 @@ def diff_subnode(node1, node2, depth, move):
     return None
 
 
-
-
 ##########################################################################
 ##                          move detection
 ##########################################################################
@@ -374,7 +369,6 @@ def move_candidate(node):
 
 
 def match_up(changes, round=0, final=False):
-
     deletions = filter(lambda p: (p.cur is None and
                                   move_candidate(p.orig) and
                                   not p.is_frame),
@@ -400,8 +394,8 @@ def match_up(changes, round=0, final=False):
             nterms = node_size(node1) + node_size(node2)
 
             if (can_move(node1, node2, cost) or
-                node_framed(node1, changes) or
-                node_framed(node2, changes)):
+                    node_framed(node1, changes) or
+                    node_framed(node2, changes)):
 
                 matched.append(d0)
                 matched.append(a0)
@@ -410,8 +404,8 @@ def match_up(changes, round=0, final=False):
                 total += cost
 
                 if (not node_framed(node1, changes) and
-                    not node_framed(node2, changes) and
-                    is_def(node1) and is_def(node2)):
+                        not node_framed(node2, changes) and
+                        is_def(node1) and is_def(node2)):
                     new_changes.append(mod_node(node1, node2, cost))
                 stat.add_moves(nterms)
                 break
@@ -421,7 +415,6 @@ def match_up(changes, round=0, final=False):
               % (len(matched), len(new_changes)))
 
     return (matched, new_changes, total)
-
 
 
 # Get moves repeatedly because new moves may introduce new
@@ -442,14 +435,11 @@ def find_moves(res, final=False):
     return (changes, cost)
 
 
-
-
 #-------------------------------------------------------------
 #                     main diff command
 #-------------------------------------------------------------
 
 def diff(file1, file2, move=True):
-
     print("\nJob started at %s, %s\n" % (time.ctime(), time.tzname[0]))
     start_time = time.time()
     checkpoint(start_time)
@@ -474,7 +464,6 @@ def diff(file1, file2, move=True):
     node2 = parse(lines2)
     improve_ast(node2, lines2, file2, 'right')
 
-
     print("[parse] finished in %s. Now start to diff." % sec_to_min(checkpoint()))
 
     # get the changes
@@ -498,13 +487,13 @@ def diff(file1, file2, move=True):
 
     report = ""
     report += ("\n--------------------- summary -----------------------") + "\n"
-    report += ("- total changes (chars):  %d" % cost)                  + "\n"
+    report += ("- total changes (chars):  %d" % cost) + "\n"
     report += ("- total code size:        %d (left: %d  right: %d)"
-               % (total, size1, size2))                                + "\n"
-    report += ("- total moved pieces:     %d" % stat.move_count)        + "\n"
+               % (total, size1, size2)) + "\n"
+    report += ("- total moved pieces:     %d" % stat.move_count) + "\n"
     report += ("- percentage of change:   %.1f%%"
-               % (div(cost, total) * 100))                             + "\n"
-    report += ("-----------------------------------------------------")   + "\n"
+               % (div(cost, total) * 100)) + "\n"
+    report += ("-----------------------------------------------------") + "\n"
 
     print report
 
@@ -519,8 +508,6 @@ def diff(file1, file2, move=True):
     print("\n\tTotal duration: %s" % sec_to_min(dur))
 
 
-
-
 def cleanup():
     str_dist_cache.clear()
     clear_uid()
@@ -532,7 +519,6 @@ def cleanup():
     stat.reset()
 
 
-
 def sec_to_min(s):
     if s < 60:
         return ("%.1f seconds" % s)
@@ -540,10 +526,12 @@ def sec_to_min(s):
         return ("%.1f minutes" % div(s, 60))
 
 
-
 last_checkpoint = None
+
+
 def checkpoint(init=None):
     import time
+
     global last_checkpoint
     if init is not None:
         last_checkpoint = init
@@ -552,8 +540,6 @@ def checkpoint(init=None):
         dur = time.time() - last_checkpoint
         last_checkpoint = time.time()
         return dur
-
-
 
 
 #-------------------------------------------------------------
@@ -572,8 +558,6 @@ def print_diff(file1, file2):
         print m0
 
     print "\n-------------------  end  ----------------------- "
-
-
 
 
 def diff_file(file1, file2):
